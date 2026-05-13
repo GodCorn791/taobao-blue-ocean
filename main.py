@@ -15,6 +15,9 @@ from src.product_hunter import ProductHunter
 from src.trend_monitor import TrendMonitor
 from src.report import ReportGenerator
 from src.skincare_selector import SkincareSelector
+from src.listing_optimizer import ListingOptimizer
+from src.launch_checklist import LaunchChecklist
+from src.combo_builder import ComboBuilder
 
 
 def cmd_hunt(args):
@@ -218,6 +221,125 @@ def cmd_skincare_categories(args):
         print(f"{c['category']:<10} {risk_icon} {c['risk_level']:<8} {cert:<8} {allowed:<20} {forbidden:<20}")
 
 
+def cmd_listing(args):
+    """生成商品上架方案"""
+    optimizer = ListingOptimizer()
+
+    # 解析参数
+    ingredients = args.ingredients.split(",") if args.ingredients else []
+
+    product = {
+        "name": args.name,
+        "category": args.category,
+        "cost": args.cost,
+        "sell_price": args.price,
+        "ingredients": ingredients,
+        "target_audience": args.audience or "年轻女性",
+    }
+
+    result = optimizer.generate_listing(product)
+
+    print(f"\n📝 商品上架方案: {args.name}")
+    print(f"{'='*60}")
+    print(f"\n  📌 推荐标题:")
+    print(f"     {result.title}")
+    print(f"\n  💬 副标题:")
+    print(f"     {result.subtitle}")
+    print(f"\n  ✨ 卖点 ({len(result.selling_points)} 个):")
+    for i, sp in enumerate(result.selling_points, 1):
+        print(f"     {i}. {sp}")
+    print(f"\n  💰 定价策略:")
+    for k, v in result.price_strategy["strategy"].items():
+        print(f"     {k}: {v}")
+    print(f"\n  📦 SKU 建议:")
+    for sku in result.price_strategy["sku建议"]:
+        print(f"     • {sku}")
+    print(f"\n  📸 主图建议:")
+    for tip in result.main_image_tips:
+        print(f"     • {tip}")
+    print(f"\n  📋 详情页结构:")
+    for sec in result.detail_sections:
+        print(f"     [{sec['section']}] {sec['content']}")
+
+
+def cmd_checklist(args):
+    """执行上架前检查"""
+    checklist = LaunchChecklist()
+
+    product = {
+        "name": args.name,
+        "category": args.category,
+        "cost": args.cost,
+        "sell_price": args.price,
+        "filing_number": args.filing,
+        "production_license": args.license,
+        "ingredients": args.ingredients.split(",") if args.ingredients else [],
+        "claims": args.claims.split(",") if args.claims else [],
+        "image_count": args.images or 0,
+        "has_detail": args.detail,
+        "stock": args.stock or 0,
+    }
+
+    result = checklist.check(product)
+
+    print(f"\n✅ 上架检查清单: {args.name}")
+    print(f"{'='*60}")
+    print(f"\n  总评: {result['summary']}")
+    print(f"  通过: {result['passed']}/{result['total']} | 评分: {result['score']}/100")
+    print(f"  可上架: {'是' if result['can_launch'] else '否'}")
+
+    # 按优先级分组显示
+    for priority in ["critical", "high", "medium", "low"]:
+        priority_items = [i for i in result["items"] if i.priority == priority]
+        if not priority_items:
+            continue
+
+        priority_label = {"critical": "🔴 关键项", "high": "🟠 高优先级", "medium": "🟡 中优先级", "low": "🔵 低优先级"}
+        print(f"\n  {priority_label[priority]}:")
+        for item in priority_items:
+            icon = "✅" if item.passed else "❌"
+            print(f"    {icon} {item.name}: {item.detail}")
+            if not item.passed and item.fix:
+                print(f"       → 修复: {item.fix}")
+
+
+def cmd_combo(args):
+    """生成套装组合策略"""
+    builder = ComboBuilder()
+
+    # 构建商品列表
+    products = []
+    for item in args.products:
+        parts = item.split(":")
+        if len(parts) >= 3:
+            products.append({
+                "name": parts[0],
+                "category": parts[1],
+                "cost": float(parts[2]),
+                "sell_price": float(parts[3]) if len(parts) > 3 else 39.9,
+            })
+
+    if len(products) < 2:
+        print("❌ 至少需要2个商品来生成套装组合")
+        print("   用法: --products '商品名:品类:成本:售价' '商品名:品类:成本:售价'")
+        return
+
+    combos = builder.suggest_combos(products, target_profit=args.profit or 40)
+
+    print(f"\n🎁 套装组合策略 ({len(products)} 个商品)")
+    print(f"{'='*60}")
+
+    for i, combo in enumerate(combos, 1):
+        print(f"\n  [{i}] {combo['type']}: {combo['name']}")
+        print(f"      💰 套装价: ¥{combo['combo_price']}")
+        print(f"      📦 总成本: ¥{combo['total_cost']}")
+        print(f"      💵 净利润: ¥{combo['net_profit']} (利润率 {combo['margin']:.0%})")
+        print(f"      🏷️ 买家省: ¥{combo['savings']}")
+        if "match_score" in combo:
+            print(f"      🎯 搭配度: {combo['match_score']}/100")
+        print(f"      📣 营销文案: {combo['marketing_text']}")
+
+
 def _level_label(score):
     if score > 80: return '🟢 深蓝'
     if score > 50: return '🔵 浅蓝'
@@ -286,6 +408,34 @@ def main():
 
     p_sk_cat = skincare_sub.add_parser('categories', help='列出支持的品类')
 
+    # listing - 上架方案生成
+    p_listing = sub.add_parser('listing', help='生成商品上架方案（标题+卖点+定价）')
+    p_listing.add_argument('--name', required=True, help='商品名称')
+    p_listing.add_argument('--category', required=True, help='品类')
+    p_listing.add_argument('--cost', type=float, required=True, help='拿货价（元）')
+    p_listing.add_argument('--price', type=float, required=True, help='售价（元）')
+    p_listing.add_argument('--ingredients', help='成分（逗号分隔）')
+    p_listing.add_argument('--audience', help='目标人群（默认：年轻女性）')
+
+    # checklist - 上架检查
+    p_check = sub.add_parser('checklist', help='上架前检查清单')
+    p_check.add_argument('--name', required=True, help='商品名称')
+    p_check.add_argument('--category', required=True, help='品类')
+    p_check.add_argument('--cost', type=float, required=True, help='拿货价')
+    p_check.add_argument('--price', type=float, required=True, help='售价')
+    p_check.add_argument('--filing', help='备案编号')
+    p_check.add_argument('--license', help='生产许可证')
+    p_check.add_argument('--ingredients', help='成分（逗号分隔）')
+    p_check.add_argument('--claims', help='功效宣称（逗号分隔）')
+    p_check.add_argument('--images', type=int, help='主图数量')
+    p_check.add_argument('--detail', action='store_true', help='是否有详情页')
+    p_check.add_argument('--stock', type=int, help='库存数量')
+
+    # combo - 套装组合
+    p_combo = sub.add_parser('combo', help='生成套装组合策略')
+    p_combo.add_argument('--products', nargs='+', required=True, help='商品列表（格式: 名称:品类:成本:售价）')
+    p_combo.add_argument('--profit', type=float, default=40, help='目标套装利润（元）')
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -297,6 +447,9 @@ def main():
         'scan': cmd_scan,
         'monitor': cmd_monitor,
         'report': cmd_report,
+        'listing': cmd_listing,
+        'checklist': cmd_checklist,
+        'combo': cmd_combo,
     }
 
     if args.command == 'skincare':
