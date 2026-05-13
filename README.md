@@ -44,6 +44,7 @@
 | **品猎手** (ProductHunter) | 从蓝海词匹配可售商品 | 利润空间、供应链可行性评分 |
 | **趋势监控** (TrendMonitor) | 持续追踪蓝海词变化 | 时间序列分析、拐点检测 |
 | **报告生成** (ReportGenerator) | 输出可视化蓝海报告 | 多维评分矩阵 |
+| **🧴 护肤品选品** (SkincareSelector) | 护肤品合规+利润筛选 | 合规检查、利润计算、供应商评估 |
 
 ---
 
@@ -67,6 +68,29 @@ python main.py monitor --keywords keywords.txt --interval daily
 
 # 生成完整蓝海报告
 python main.py report --output report.html
+```
+
+### 🧴 护肤品选品（合规 + 利润筛选）
+
+```bash
+# 列出支持的护肤品品类
+python main.py skincare categories
+
+# 扫描品类合规蓝海选品（利润>20元）
+python main.py skincare scan --category "面膜" --profit-min 20
+
+# 扫描身体乳品类
+python main.py skincare scan --category "身体乳" --profit-min 20 --profit-max 30
+
+# 检查单个商品的合规性和利润
+python main.py skincare check \
+  --name "烟酰胺身体乳" \
+  --category "身体乳" \
+  --cost 8 --price 45.9 \
+  --claims "保湿,滋润" \
+  --ingredients "烟酰胺,甘油" \
+  --filing "粤G妆网备字2024001234" \
+  --license "粤妆20240001"
 ```
 
 ---
@@ -110,6 +134,7 @@ taobao-blue-ocean/
 │   ├── product_hunter.py    # 蓝海品发现
 │   ├── trend_monitor.py     # 趋势监控
 │   ├── report.py            # 报告生成
+│   ├── skincare_selector.py # 护肤品选品引擎（合规+利润）
 │   └── config.py            # 配置管理
 ├── analyzers/
 │   ├── blue_ocean_score.py  # 蓝海指数算法
