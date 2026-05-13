@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>🌊 蓝海猎手分析报告</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0e27; color: #e0e0e0; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 2.2em; margin-bottom: 10px; background: linear-gradient(135deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 40px; }
+        .card { background: #141832; border-radius: 16px; padding: 30px; margin-bottom: 24px; border: 1px solid #1e2448; }
+        .card h2 { font-size: 1.3em; margin-bottom: 20px; color: #00d4ff; }
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .summary-item { text-align: center; padding: 20px; border-radius: 12px; background: #1a1f40; }
+        .summary-item .number { font-size: 2.5em; font-weight: bold; }
+        .summary-item .label { font-size: 0.85em; color: #888; margin-top: 8px; }
+        .deep-blue .number { color: #00ff88; }
+        .light-blue .number { color: #00d4ff; }
+        .blue-green .number { color: #ffaa00; }
+        .red-ocean .number { color: #ff4444; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #1e2448; }
+        th { color: #00d4ff; font-weight: 600; }
+        .score { font-weight: bold; font-size: 1.1em; }
+        .score.high { color: #00ff88; }
+        .score.mid { color: #00d4ff; }
+        .score.low { color: #ffaa00; }
+        .bar { height: 8px; border-radius: 4px; background: #1e2448; margin-top: 6px; }
+        .bar-fill { height: 100%; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 蓝海猎手分析报告</h1>
+        <p class="subtitle">生成时间: 2026-05-13T12:17:27</p>
+        
+        <div class="card">
+            <h2>📊 扫描概览</h2>
+            <div class="summary-grid">
+                <div class="summary-item deep-blue">
+                    <div class="number">12</div>
+                    <div class="label">🟢 深蓝海</div>
+                </div>
+                <div class="summary-item light-blue">
+                    <div class="number">28</div>
+                    <div class="label">🔵 浅蓝海</div>
+                </div>
+                <div class="summary-item blue-green">
+                    <div class="number">45</div>
+                    <div class="label">🟡 蓝绿交界</div>
+                </div>
+                <div class="summary-item red-ocean">
+                    <div class="number">71</div>
+                    <div class="label">🔴 红海</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🏆 Top 5 蓝海关键词</h2>
+            <table>
+                <tr><th>排名</th><th>关键词</th><th>蓝海指数</th><th>搜索量</th><th>卖家数</th></tr>
+                <tr><td>1</td><td>桌面收纳盒 学生宿舍</td><td><span class="score high">87.3</span></td><td>8,500</td><td>320</td></tr><tr><td>2</td><td>便携挂烫机 家用小型</td><td><span class="score high">82.1</span></td><td>6,200</td><td>280</td></tr><tr><td>3</td><td>宠物自动喂食器 防潮</td><td><span class="score high">79.8</span></td><td>5,800</td><td>350</td></tr><tr><td>4</td><td>北欧风桌面摆件 创意</td><td><span class="score high">76.5</span></td><td>4,200</td><td>190</td></tr><tr><td>5</td><td>厨房调料架 壁挂式</td><td><span class="score high">74.2</span></td><td>7,100</td><td>480</td></tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
