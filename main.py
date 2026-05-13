@@ -8,6 +8,7 @@ import argparse
 import json
 import sys
 from datetime import datetime
+from typing import Dict
 
 from src.keyword_hunter import KeywordHunter
 from src.competition import CompetitionAnalyzer
@@ -18,6 +19,9 @@ from src.skincare_selector import SkincareSelector
 from src.listing_optimizer import ListingOptimizer
 from src.launch_checklist import LaunchChecklist
 from src.combo_builder import ComboBuilder
+from src.seasonal_calendar import SeasonalCalendar
+from src.roi_calculator import ROICalculator
+from src.supplier_tracker import SupplierTracker
 
 
 def cmd_hunt(args):
@@ -340,6 +344,145 @@ def cmd_combo(args):
         print(f"      📣 营销文案: {combo['marketing_text']}")
 
 
+def cmd_season(args):
+    """查看季节选品日历"""
+    calendar = SeasonalCalendar()
+
+    if args.month:
+        strategy = calendar.get_month(args.month)
+        if not strategy:
+            print(f"❌ 无效月份: {args.month}")
+            return
+        _print_month_strategy(strategy)
+    elif args.category:
+        months = calendar.get_category_peak_months(args.category)
+        print(f"\n📅 「{args.category}」旺季月份: {', '.join(f'{m}月' for m in months)}")
+        for m in months:
+            s = calendar.get_month(m)
+            print(f"\n  📌 {m}月 — {s['name']}")
+            print(f"     流量高峰: {s['traffic_peak']}")
+            for action in s["action"][:2]:
+                print(f"     • {action}")
+    else:
+        overview = calendar.get_year_overview()
+        print(f"\n📅 护肤品全年选品日历")
+        print(f"{'='*70}")
+        for item in overview:
+            cats = ", ".join(item["hot_categories"][:3])
+            print(f"  {item['month']:>2}月 | {item['name']:<20} | 热门品类: {cats}")
+        print(f"\n💡 用 --month N 查看具体月份策略，用 --category 品类 查看旺季")
+
+
+def _print_month_strategy(strategy: Dict):
+    """打印单月策略详情"""
+    print(f"\n📅 {strategy['name']}")
+    print(f"{'='*60}")
+    print(f"  季节: {strategy['season']}")
+    print(f"  热门品类: {', '.join(strategy['hot_categories'])}")
+    print(f"  流量高峰: {strategy['traffic_peak']}")
+    print(f"  原因: {strategy['reason']}")
+    print(f"\n  📋 执行动作:")
+    for action in strategy["action"]:
+        print(f"     • {action}")
+    print(f"\n  💰 利润提示: {strategy['profit_tip']}")
+
+
+def cmd_roi(args):
+    """计算投产比"""
+    calculator = ROICalculator()
+
+    if args.quick:
+        # 快速估算
+        result = calculator.quick_estimate(
+            cost=args.cost,
+            sell_price=args.price,
+            daily_orders=args.orders or 10,
+        )
+        print(f"\n💰 快速利润估算")
+        print(f"{'='*50}")
+        print(f"  拿货价: ¥{args.cost} → 售价: ¥{args.price}")
+        print(f"  单件利润: ¥{result['unit_profit']}")
+        print(f"  日利润 (按{args.orders or 10}单): ¥{result['daily_profit']}")
+        print(f"  月利润: ¥{result['monthly_profit']}")
+        print(f"  年利润: ¥{result['annual_profit']}")
+        print(f"  利润率: {result['margin']:.0%}")
+        print(f"  保本单量: {result['break_even_orders']} 单/天")
+    else:
+        # 完整投产比计算
+        result = calculator.calculate({
+            "daily_budget": args.budget or 100,
+            "cpc": args.cpc or 1.5,
+            "conversion_rate": args.conversion or 0.03,
+            "avg_order_value": args.price,
+            "product_cost": args.cost,
+            "express_fee": args.express or 3.5,
+        })
+        d = result["daily"]
+        m = result["monthly"]
+        b = result["breakeven"]
+
+        print(f"\n💰 投产比分析")
+        print(f"{'='*60}")
+        print(f"  📊 日数据:")
+        print(f"     广告花费: ¥{d['ad_spend']} | 展现: {d['impressions']:,} | 点击: {d['clicks']}")
+        print(f"     订单: {d['orders']}单 | 营收: ¥{d['revenue']} | 利润: ¥{d['profit']}")
+        print(f"     ROI: {d['roi']:.2f} | CPC: ¥{d['cpc']} | CPA: ¥{d['cpa']}")
+        print(f"     转化率: {d['conversion_rate']:.2%}")
+        print(f"\n  📈 月预估:")
+        print(f"     广告花费: ¥{m['ad_spend']:,.0f} | 订单: {m['orders']}单 | 利润: ¥{m['profit']:,.0f}")
+        print(f"\n  ⚖️ 盈亏平衡点:")
+        print(f"     最低日单量: {b['min_orders']}单 | 最低日点击: {b['min_clicks']} | 最低日预算: ¥{b['min_budget']}")
+        print(f"\n  💡 优化建议:")
+        for s in result["suggestions"]:
+            print(f"     {s}")
+
+
+def cmd_supplier(args):
+    """供应商管理"""
+    tracker = SupplierTracker()
+
+    if args.supplier_cmd == "add":
+        result = tracker.add({
+            "name": args.name,
+            "platform": args.platform or "1688",
+            "contact": args.contact or "",
+            "category": args.category or "",
+            "moq": args.moq or 5,
+            "delivery_days": args.delivery or 3,
+            "price_level": args.price_level or "中",
+            "quality_score": args.quality or 70,
+            "notes": args.notes or "",
+        })
+        print(f"\n  {result['message']}")
+
+    elif args.supplier_cmd == "list":
+        suppliers = tracker.list_all()
+        if not suppliers:
+            print("\n  📭 暂无供应商记录")
+            return
+        print(f"\n📋 供应商列表 ({len(suppliers)} 家)")
+        print(f"{'='*70}")
+        print(f"{'ID':<8} {'名称':<15} {'品类':<10} {'评分':<6} {'订单':<6} {'采购额':<10}")
+        print("-" * 70)
+        for s in suppliers:
+            print(f"{s['id']:<8} {s['name']:<15} {s.get('category',''):<10} {s['rating']:<6} {s['orders']:<6} ¥{s['total_amount']:<9.0f}")
+
+    elif args.supplier_cmd == "order":
+        result = tracker.record_order(args.supplier_id, args.amount)
+        if "error" in result:
+            print(f"\n  ❌ {result['error']}")
+        else:
+            print(f"\n  ✅ 记录成功: {result['supplier']} | 总订单: {result['total_orders']} | 评分: {result['rating']}")
+
+    elif args.supplier_cmd == "recommend":
+        result = tracker.get_recommendation(args.category)
+        if result:
+            print(f"\n  🏆 推荐供应商: {result['name']} (评分: {result['rating']})")
+            print(f"     平台: {result.get('platform', '')} | 起订量: {result.get('moq', '')} | 发货: {result.get('delivery_days', '')}天")
+        else:
+            print(f"\n  ❌ 品类「{args.category}」暂无推荐供应商")
+
+
 def _level_label(score):
     if score > 80: return '🟢 深蓝'
     if score > 50: return '🔵 浅蓝'
@@ -436,6 +579,46 @@ def main():
     p_combo.add_argument('--products', nargs='+', required=True, help='商品列表（格式: 名称:品类:成本:售价）')
     p_combo.add_argument('--profit', type=float, default=40, help='目标套装利润（元）')
 
+    # season - 季节选品日历
+    p_season = sub.add_parser('season', help='护肤品季节选品日历')
+    p_season.add_argument('--month', type=int, help='查看指定月份(1-12)')
+    p_season.add_argument('--category', help='查看某品类的旺季')
+
+    # roi - 投产比计算
+    p_roi = sub.add_parser('roi', help='投产比计算器')
+    p_roi.add_argument('--cost', type=float, required=True, help='拿货价（元）')
+    p_roi.add_argument('--price', type=float, required=True, help='售价（元）')
+    p_roi.add_argument('--budget', type=float, help='日广告预算（元）')
+    p_roi.add_argument('--cpc', type=float, help='单次点击成本（元）')
+    p_roi.add_argument('--conversion', type=float, help='转化率')
+    p_roi.add_argument('--express', type=float, help='快递费（元）')
+    p_roi.add_argument('--orders', type=int, help='日单量（快速估算用）')
+    p_roi.add_argument('--quick', action='store_true', help='快速估算模式')
+
+    # supplier - 供应商管理
+    p_supplier = sub.add_parser('supplier', help='供应商管理（添加/列表/记录采购）')
+    supplier_sub = p_supplier.add_subparsers(dest='supplier_cmd')
+
+    p_sup_add = supplier_sub.add_parser('add', help='添加供应商')
+    p_sup_add.add_argument('--name', required=True, help='供应商名称')
+    p_sup_add.add_argument('--platform', help='平台（1688/拼多多/线下）')
+    p_sup_add.add_argument('--contact', help='联系方式')
+    p_sup_add.add_argument('--category', help='主营品类')
+    p_sup_add.add_argument('--moq', type=int, help='最小起订量')
+    p_sup_add.add_argument('--delivery', type=int, help='发货天数')
+    p_sup_add.add_argument('--price-level', choices=['低', '中', '高'], help='价格水平')
+    p_sup_add.add_argument('--quality', type=int, help='质量评分(0-100)')
+    p_sup_add.add_argument('--notes', help='备注')
+
+    p_sup_list = supplier_sub.add_parser('list', help='列出所有供应商')
+
+    p_sup_order = supplier_sub.add_parser('order', help='记录采购订单')
+    p_sup_order.add_argument('--supplier-id', required=True, help='供应商ID')
+    p_sup_order.add_argument('--amount', type=float, required=True, help='采购金额')
+
+    p_sup_rec = supplier_sub.add_parser('recommend', help='获取品类推荐供应商')
+    p_sup_rec.add_argument('--category', required=True, help='品类')
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -450,6 +633,8 @@ def main():
         'listing': cmd_listing,
         'checklist': cmd_checklist,
         'combo': cmd_combo,
+        'season': cmd_season,
+        'roi': cmd_roi,
     }
 
     if args.command == 'skincare':
@@ -462,6 +647,8 @@ def main():
             skincare_commands[args.skincare_cmd](args)
         else:
             p_skincare.print_help()
+    elif args.command == 'supplier':
+        cmd_supplier(args)
     elif args.command in commands:
         commands[args.command](args)
     else:
